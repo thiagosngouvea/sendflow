@@ -42,7 +42,10 @@ function Page() {
     event.preventDefault();
     const result = await addData(name, phone);
     if (result) {
-      console.log("Cadastrado com sucesso");
+      setName("");
+      setPhone("");
+      setMessage("");
+      alert("Contato cadastrado com sucesso!");
     }
   }
 
