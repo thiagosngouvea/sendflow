@@ -19,11 +19,11 @@ function Page() {
         const { result, error } = await signUp(email, password);
 
         if (error) {
-            return console.log(error)
+            return alert("Erro ao realizar cadastro")
         }
 
         // else successful
-        console.log(result)
+        alert("Cadastro realizado com sucesso!")
         return router.push("/signIn")
     }
     return (

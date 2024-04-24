@@ -29,10 +29,9 @@ function SignIn() {
         }
       }
 
-      console.log(result);
       return router.push("/");
     } catch (error) {
-      console.error("Error: ", error);
+      alert("Erro ao realizar login");
     }
   };
 
