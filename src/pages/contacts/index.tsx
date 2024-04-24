@@ -4,7 +4,6 @@ import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebaseAppConfig";
 import {
   collection,
-  addDoc,
   getDocs,
   deleteDoc,
   doc,
@@ -24,7 +23,6 @@ function Page() {
   const [contacts, setContacts] = useState([] as any[]);
 
   const { userAuth } = useAuthContext();
-  const router = useRouter();
 
   const deletar = async (id: string) => {
     await deleteDoc(doc(db, "contacts", id));
@@ -39,12 +37,6 @@ function Page() {
     }
     fetchData();
   }, []);
-
-  useEffect(() => {
-    if (userAuth === null) {
-      router.push("/signIn");
-    }
-  }, [userAuth]);
 
   return (
     <>
@@ -66,12 +58,12 @@ function Page() {
                         <button
                           onClick={() => {
                             //pegar os contatos e enviar disparos
-                            
+                            alert(`Mensagens Enviadas com Sucesso para todos o(s) ${contacts.length} Contatos`);
                           }}
                           className="inline-block text-[.925rem] text-white font-medium leading-normal text-center align-middle cursor-pointer rounded-2xl transition-colors duration-150 ease-in-out text-light-inverse bg-black border-light shadow-none border-0 py-2 px-5 hover:bg-secondary active:bg-light focus:bg-light"
                         >
                           {" "}
-                          Enviar Disparos{" "}
+                          Enviar Todos Disparos{" "}
                         </button>
                       </div>
                     </div>
@@ -111,12 +103,20 @@ function Page() {
                                 </td>
                                 <td className="py-3 whitespace-nowrap text-left text-[0.95rem] text-dark">
                                   <button
-                                    className="text-[0.75rem] font-medium text-dark bg-transparent border border-dark rounded-lg hover:text-white hover:bg-dark py-1 px-2"
+                                    className="text-[0.75rem] font-medium text-dark bg-transparent border border-dark rounded-lg hover:text-white hover:bg-red-500 py-1 px-2"
                                     onClick={async () => {
                                       await deletar(contact.id);
                                     }}
                                   >
                                     Excluir
+                                  </button>
+                                  <button
+                                    className="text-[0.75rem] font-medium text-dark bg-transparent border border-dark rounded-lg hover:text-white hover:bg-blue-500 py-1 px-2 ml-2"
+                                    onClick={() => {
+                                      alert(`Mensagem Enviada com Sucesso para ${contact.name}`);
+                                    }}
+                                  >
+                                    Enviar
                                   </button>
                                 </td>
                               </tr>

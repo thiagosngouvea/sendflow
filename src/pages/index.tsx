@@ -46,12 +46,6 @@ function Page() {
     }
   }
 
-  useEffect(() => {
-    if (userAuth === null) {
-      router.push("/signIn");
-    }
-  }, [userAuth]);
-
   return (
     <>
       {userAuth && (

@@ -2,6 +2,8 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { onAuthStateChanged, getAuth, User, signOut } from 'firebase/auth';
 import { AuthContext } from './AuthContext';
 import firebase_app from '../firebase/firebaseAppConfig';
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/router';
 
 interface AuthContextProviderProps {
     children: ReactNode;
@@ -15,9 +17,11 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
     const [userAuth, setUserAuth] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const router = useRouter();
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (authUserCredentials: User | null) => {
-            // Cookies.set('sendflow.token', authUserCredentials?.refreshToken ?? '');
+            Cookies.set('sendflow.token', authUserCredentials?.refreshToken ?? '');
             setUserAuth(authUserCredentials);
             setLoading(false);
         });
@@ -30,6 +34,8 @@ export const AuthContextProvider: React.FC<AuthContextProviderProps> = ({
             error = null;
         try {
             result = await signOut(auth);
+            Cookies.remove('sendflow.token');
+            router.push('/signIn');
         } catch (e) {
             error = e;
         }

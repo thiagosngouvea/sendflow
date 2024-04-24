@@ -6,6 +6,7 @@ import signIn from "../../firebase/auth/signIn";
 import { useRouter } from "next/navigation";
 import Logo from "@/assets/logo.png";
 import Image from "next/image";
+import Link from "next/link";
 
 function SignIn() {
   const [email, setEmail] = useState("");
@@ -93,12 +94,12 @@ function SignIn() {
                 </button>
                 <p className="text-sm text-white text-center">
                     Não tem uma conta?{" "}
-                    <a
+                    <Link
                         href="/signUp"
                         className="font-medium text-[#FFDE07] hover:underline dark:text-primary-500"
                     >
                         Cadastre-se
-                    </a>
+                    </Link>
                 </p>
               </div>
             </form>
