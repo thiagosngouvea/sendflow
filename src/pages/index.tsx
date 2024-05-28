@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateQRCode } from "@/services/qrcode.service";
@@ -54,7 +55,7 @@ function Page() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
 
-  const [qrCodeBase64, setQrCodeBase64] = useState("");
+  const [qrCodeBase64, setQrCodeBase64] = useState<any>("");
 
   const { userAuth, logout } = useAuthContext();
 
