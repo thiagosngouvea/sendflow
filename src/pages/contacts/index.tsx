@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/context/AuthContext";
 import { db } from "@/firebase/firebaseAppConfig";
@@ -7,7 +7,30 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  getDoc,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
 } from "firebase/firestore";
+
+import Grid from "@mui/material/Grid";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
+import Container from "@mui/material/Container";
+
+import Button from "@/components/Button";
+import Input from "@/components/Input";
+import Table from "@/components/Table";
+
+interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  message: string;
+  user_id: string;
+  timestamp?: number;
+}
 
 async function getData() {
   const querySnapshot = await getDocs(collection(db, "contacts"));
@@ -19,8 +42,21 @@ async function getData() {
   return data;
 }
 
+function getDataByUserIdRealTime(userId: string, callback: any) {
+  const q = query(collection(db, "contacts"), where("user_id", "==", userId));
+  return onSnapshot(q, (querySnapshot) => {
+    const data: { id: string; [key: string]: any }[] = [];
+    querySnapshot.forEach((doc) => {
+      data.push({ id: doc.id, ...doc.data() });
+    });
+    callback(data);
+  });
+}
+
 function Page() {
   const [contacts, setContacts] = useState([] as any[]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
 
   const { userAuth } = useAuthContext();
 
@@ -31,106 +67,117 @@ function Page() {
   };
 
   useEffect(() => {
-    async function fetchData() {
-      const data = await getData();
-      setContacts(data);
+    if (!userAuth?.uid) return;
+
+    const unsubscribe = getDataByUserIdRealTime(userAuth.uid, setContacts);
+
+    // Cleanup the listener on unmount
+    return () => unsubscribe();
+  }, [userAuth?.uid]);
+
+  async function addData(name: string, phone: string) {
+    try {
+      const docRef = await addDoc(collection(db, "contacts"), {
+        name,
+        phone,
+        user_id: userAuth?.uid,
+        timestamp: Date.now(),
+      });
+      console.log("Document written with ID: ", docRef.id);
+      return true;
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      return false;
     }
-    fetchData();
-  }, []);
+  }
+
+  async function handleForm(event: FormEvent) {
+    event.preventDefault();
+    const result = await addData(name, phone);
+    if (result) {
+      setName("");
+      setPhone("");
+      alert("Contato cadastrado com sucesso!");
+    }
+  }
 
   return (
     <>
       {userAuth && (
-        <section className="bg-[#151515]">
-          <div className=" grid items-center justify-center px-6 py-8 mx-auto lg:py-0">
-            <h1 className="text-white text-lg font-bold">Lista de Contatos</h1>
-            <div className="flex flex-wrap -mx-3 mb-5">
-              <div className="w-full max-w-full px-3 mb-6  mx-auto">
-                <div className="relative flex-[1_auto] flex flex-col break-words min-w-0 bg-clip-border rounded-[.95rem] bg-white m-5">
-                  <div className="relative flex flex-col min-w-0 break-words border border-dashed bg-clip-border rounded-2xl border-stone-200 bg-light/30">
-                    <div className="px-9 pt-5 flex justify-between items-stretch flex-wrap min-h-[70px] pb-0 bg-transparent">
-                      <h3 className="flex flex-col items-start justify-center m-2 ml-0 font-medium text-xl/tight text-dark">
-                        <span className="mr-3 font-semibold text-dark">
-                          Contatos
-                        </span>
-                      </h3>
-                      <div className="relative flex flex-wrap items-center my-2">
-                        <button
-                          onClick={() => {
-                            //pegar os contatos e enviar disparos
-                            alert(`Mensagens Enviadas com Sucesso para todos o(s) ${contacts.length} Contatos`);
-                          }}
-                          className="inline-block text-[.925rem] text-white font-medium leading-normal text-center align-middle cursor-pointer rounded-2xl transition-colors duration-150 ease-in-out text-light-inverse bg-black border-light shadow-none border-0 py-2 px-5 hover:bg-secondary active:bg-light focus:bg-light"
-                        >
-                          {" "}
-                          Enviar Todos Disparos{" "}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex-auto block py-8 pt-6 px-9">
-                      <div className="overflow-x-auto">
-                        <table className="w-full my-0 align-middle text-dark border-neutral-200">
-                          <thead className="align-bottom">
-                            <tr className="font-semibold text-[0.95rem] text-secondary-dark">
-                              <th className="pb-3 text-start min-w-[175px]">
-                                NOME
-                              </th>
-                              <th className="pb-3 text-start min-w-[100px]">
-                                CONTATO
-                              </th>
-                              <th className="pb-3 text-start min-w-[300px]">
-                                MENSAGEM
-                              </th>
-                              <th className="pb-3 text-start min-w-[100px]">
-                                AÇÕES
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {contacts.map((contact) => (
-                              <tr
-                                key={contact.id}
-                                className="border-b border-neutral-200"
-                              >
-                                <td className="py-3 whitespace-nowrap text-left text-[0.95rem] font-medium text-dark">
-                                  {contact.name}
-                                </td>
-                                <td className="py-3 whitespace-nowrap text-left text-[0.95rem] text-dark">
-                                  {contact.phone}
-                                </td>
-                                <td className="py-3 whitespace-nowrap text-left text-[0.95rem] text-dark">
-                                  {contact.message}
-                                </td>
-                                <td className="py-3 whitespace-nowrap text-left text-[0.95rem] text-dark">
-                                  <button
-                                    className="text-[0.75rem] font-medium text-dark bg-transparent border border-dark rounded-lg hover:text-white hover:bg-red-500 py-1 px-2"
-                                    onClick={async () => {
-                                      await deletar(contact.id);
-                                    }}
-                                  >
-                                    Excluir
-                                  </button>
-                                  <button
-                                    className="text-[0.75rem] font-medium text-dark bg-transparent border border-dark rounded-lg hover:text-white hover:bg-blue-500 py-1 px-2 ml-2"
-                                    onClick={() => {
-                                      alert(`Mensagem Enviada com Sucesso para ${contact.name}`);
-                                    }}
-                                  >
-                                    Enviar
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
+        <div className="grid gap-4">
+          <section className="bg-[#151515]">
+          <Grid 
+              container
+              direction="column"
+              justifyContent="center"
+              alignItems="center"
+              spacing={2}
+              marginBottom={2}
+              width="100%"
+            >
+              <Typography
+                variant="h6"
+                component="h6"
+                sx={{ color: "#FFF", marginBottom: "1rem" }}
+              >
+                Cadastro de contatos para envio de mensagens
+              </Typography>
+              <form onSubmit={handleForm} className="grid gap-2">
+                <Input
+                  label="Nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <Input
+                  label="Telefone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+                <div className="grid gap-2">
+                  <Button>Cadastrar</Button>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
+              </form>
+            </Grid>
+          </section>
+          <section className="bg-[#151515]">
+            <Grid 
+              container
+              direction="column"
+              justifyContent="center"
+              alignItems="center"
+              spacing={2}
+            >
+              <Typography
+                variant="h6"
+                component="h6"
+                sx={{ color: "#FFF", marginBottom: "1rem", fontBold: "bold" }}
+              >
+                Lista de Contatos
+              </Typography>
+              <Container
+                maxWidth="lg"
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  backgroundColor: "#151515",
+                }}
+              >
+                <Table
+                  data={contacts}
+                  columns={[
+                    { key: "name", title: "Nome" },
+                    { key: "phone", title: "Telefone" },
+                    // Adicione mais colunas conforme necessário
+                  ]}
+                  onDelete={(id) => {
+                    // Implemente a lógica de exclusão aqui
+                  }}
+                />
+              </Container>
+            </Grid>
+          </section>
+        </div>
       )}
     </>
   );
@@ -140,7 +187,7 @@ export default Page;
 
 // export function getServerSideProps(ctx: any) {
 //     const { 'sendflow.token': token } = parseCookies(ctx);
-  
+
 //     if (!token) {
 //       return {
 //         redirect: {
@@ -149,10 +196,9 @@ export default Page;
 //         },
 //       };
 //     }
-  
+
 //     return {
 //       props: {
 //       },
 //     };
 //   }
-  

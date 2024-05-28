@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import Logo from "@/assets/logo.png";
 import Image from "next/image";
 import Link from "next/link";
-
+import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 function Page() {
     const [email, setEmail] = React.useState('')
@@ -43,45 +44,25 @@ function Page() {
                   Cadastre sua conta, é rápido e fácil.
               </p>
               <form className="space-y-4 md:space-y-6" onSubmit={handleForm}>
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block mb-2 text-sm font-medium text-white"
-                  >
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
-                    placeholder="name@company.com"
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block mb-2 text-sm font-medium text-white"
-                  >
-                    Senha
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    id="password"
-                    placeholder="••••••••"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
+              <div>
+                <Input
+                  label="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <Input
+                  label="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type="password"
+                />
+              </div>
                 <div className="grid gap-2">
-                  <button
-                      type="submit"
-                      className="w-full text-black bg-[#FFDE07] hover:bg-[#B29B04] focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-                  >
-                      Cadastrar
-                  </button>
+                <Button>
+                  Cadastrar
+                </Button>
                   <p className="text-sm text-white text-center">
                       Já tem uma conta?{" "}
                       <Link

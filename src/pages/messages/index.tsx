@@ -5,18 +5,28 @@ import { db } from "@/firebase/firebaseAppConfig";
 import {
   collection,
   getDocs,
+  deleteDoc,
+  doc,
+  getDoc,
+  addDoc,
+  query,
+  where,
+  onSnapshot
 } from "firebase/firestore";
+import {sendMessage} from "@/services/message.service";
 import Modal from "@/components/Modal";
 
-async function getData() {
-  const querySnapshot = await getDocs(collection(db, "contacts"));
-
-  const data: { id: string; [key: string]: any }[] = [];
-  querySnapshot.forEach((doc) => {
-    data.push({ id: doc.id, ...doc.data() });
+function getDataByUserIdRealTime(userId: string, callback:any) {
+  const q = query(collection(db, "contacts"), where("user_id", "==", userId));
+  return onSnapshot(q, (querySnapshot) => {
+    const data: { id: string; [key: string]: any }[] = [];
+    querySnapshot.forEach((doc) => {
+      data.push({ id: doc.id, ...doc.data() });
+    });
+    callback(data);
   });
-  return data;
 }
+
 
 function Page() {
   const [contacts, setContacts] = useState([] as any[]);
@@ -43,14 +53,40 @@ function Page() {
     }
   };
 
-
   useEffect(() => {
-    async function fetchData() {
-      const data = await getData();
-      setContacts(data);
+    if (!userAuth?.uid) return;
+
+    const unsubscribe = getDataByUserIdRealTime(userAuth.uid, setContacts);
+
+    // Cleanup the listener on unmount
+    return () => unsubscribe();
+  }, [userAuth?.uid]);
+
+  const enviarDisparo = async () => {
+    if(selectedContacts.length === 0) {
+      alert("Selecione ao menos um contato para enviar a mensagem");
+      return;
     }
-    fetchData();
-  }, []);
+
+    if(message === "") {
+      alert("Digite uma mensagem para enviar");
+      return;
+    }
+
+    try {
+      await sendMessage({
+        phoneNumbers: selectedContacts,
+        message,
+      });
+
+      alert("A mensagem foi enviada com sucesso para os contatos selecionados");
+      setSelectedContacts([]);
+      setMessage("");
+    } catch (error) {
+      console.error(error);
+      alert("Ocorreu um erro ao enviar a mensagem");
+    }
+  };
 
   return (
     <>
@@ -61,7 +97,7 @@ function Page() {
               Mensagem Personalizada
             </h1>
             <div className="flex flex-wrap -mx-3 mb-5">
-              <div className="w-full max-w-full px-3 mb-6  mx-auto">
+              <div className="w-full max-w-full px-3 mb-6 mx-auto">
                 <div className="relative flex-[1_auto] flex flex-col break-words min-w-0 bg-clip-border rounded-[.95rem] bg-white m-5">
                   <div className="relative flex flex-col min-w-0 break-words border border-dashed bg-clip-border rounded-2xl border-stone-200 bg-light/30">
                     <div className="px-9 pt-5 flex justify-between items-stretch flex-wrap min-h-[70px] pb-0 bg-transparent">
@@ -72,20 +108,7 @@ function Page() {
                       </h3>
                       <div className="relative flex flex-wrap items-center my-2">
                         <button
-                          onClick={() => {
-                            if(selectedContacts.length === 0) {
-                              alert("Selecione ao menos um contato para enviar a mensagem");
-                              return;
-                            }
-
-                            if(message === "") {
-                              alert("Digite uma mensagem para enviar");
-                              return;
-                            }
-                            alert("A mensagem foi enviado com sucesso para os contatos selecionados");
-                            setSelectedContacts([]);
-                            setMessage("");
-                          }}
+                          onClick={() => enviarDisparo()}
                           className="inline-block text-[.925rem] text-white font-medium leading-normal text-center align-middle cursor-pointer rounded-2xl transition-colors duration-150 ease-in-out text-light-inverse bg-black border-light shadow-none border-0 py-2 px-5 hover:bg-secondary active:bg-light focus:bg-light"
                         >
                           {" "}
@@ -128,9 +151,9 @@ function Page() {
                                 type="checkbox"
                                 id={`contact-${contact.id}`}
                                 name={`contact-${contact.id}`}
-                                value={contact.id}
-                                onChange={() => handleContactSelect(contact.id)}
-                                checked={selectedContacts.includes(contact.id)}
+                                value={contact.phone}
+                                onChange={() => handleContactSelect(contact.phone)}
+                                checked={selectedContacts.includes(contact.phone)}
                                 className="form-checkbox h-5 w-5 text-blue-600"
                               />
                               <label

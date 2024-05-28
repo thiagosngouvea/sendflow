@@ -1,34 +1,70 @@
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { generateQRCode } from "@/services/qrcode.service";
 import { useAuthContext } from "../context/AuthContext";
 import { db } from "@/firebase/firebaseAppConfig";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { getDatabase, ref, set, push, onValue } from "firebase/database";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  getDoc,
+  addDoc,
+  query,
+  where,
+  onSnapshot,
+} from "firebase/firestore";
+import QRCode from "qrcode";
 
-async function getData() {
-  const querySnapshot = await getDocs(collection(db, "contacts"));
+interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  user_id: string;
+  timestamp?: number;
+}
 
-  const data: { id: string; [key: string]: any }[] = [];
-  querySnapshot.forEach((doc) => {
-    data.push({ id: doc.id, ...doc.data() });
+async function getData(): Promise<Contact[]> {
+  const dbRef = ref(getDatabase(), "contacts/");
+  const data: Contact[] = [];
+
+  onValue(dbRef, (snapshot) => {
+    snapshot.forEach((childSnapshot) => {
+      const childData = childSnapshot.val();
+      data.push({ id: childSnapshot.key, ...childData });
+    });
   });
+
   return data;
+}
+
+function getQrCode(userId: string, callback: any) {
+  const q = query(collection(db, "qrcode"));
+  return onSnapshot(q, (querySnapshot) => {
+    const data: { id: string; [key: string]: any }[] = [];
+    querySnapshot.forEach((doc) => {
+      data.push({ id: doc.id, ...doc.data() });
+    });
+    callback(data);
+  });
 }
 
 function Page() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
 
+  const [qrCodeBase64, setQrCodeBase64] = useState("");
 
   const { userAuth, logout } = useAuthContext();
-  const router = useRouter();
 
   async function addData(name: string, phone: string) {
     try {
       const docRef = await addDoc(collection(db, "contacts"), {
         name,
         phone,
-        message,
+        user_id: userAuth?.uid,
+        timestamp: Date.now(),
       });
       console.log("Document written with ID: ", docRef.id);
       return true;
@@ -38,53 +74,39 @@ function Page() {
     }
   }
 
-  async function handleForm(event: React.FormEvent) {
+  async function handleForm(event: FormEvent) {
     event.preventDefault();
     const result = await addData(name, phone);
     if (result) {
       setName("");
       setPhone("");
-      setMessage("");
       alert("Contato cadastrado com sucesso!");
     }
   }
+
+  useEffect(() => {
+    if (!userAuth?.uid) return;
+
+    const unsubscribe = getQrCode(userAuth.uid, setQrCodeBase64);
+
+    // Cleanup the listener on unmount
+    return () => unsubscribe();
+  }, [userAuth?.uid]);
 
   return (
     <>
       {userAuth && (
         <section className="bg-[#151515]">
-          <div className=" grid items-center justify-center px-6 py-8 mx-auto lg:py-0">
-            <h1 className="text-white text-lg font-bold">
-              Cadastro de contatos para envio de mensagens
+          <div className="flex items-center justify-center px-6 py-8 mx-auto lg:py-0">
+            {qrCodeBase64 && (
+              <img
+                src={qrCodeBase64[qrCodeBase64.length - 1]?.qr_code}
+                alt="QR Code"
+              />
+            )}
+            <h1 className="text-white text-lg font-bold self-start ml-2">
+              Escaneie o QR Code para utilizar o sistema
             </h1>
-            <form onSubmit={handleForm} className="grid gap-2">
-              <input
-                type="text"
-                placeholder="Nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Contato"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="px-4 py-2 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <textarea
-                placeholder="Digite aqui a mensagem que deseja enviar"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="px-4 py-2 mt-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                    type="submit"
-                    className="w-full text-black bg-[#FFDE07] hover:bg-[#B29B04] focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-                >
-                    Cadastrar
-                </button>
-            </form>
           </div>
         </section>
       )}
